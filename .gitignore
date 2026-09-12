@@ -1,0 +1,77 @@
+# Local environment files, including development/staging/production variants.
+# Keep credential-free examples trackable at any project depth.
+.env
+.env.*
+!.env.example
+
+# Node / pnpm / Next.js dependencies, caches, and generated output.
+node_modules/
+.pnpm-store/
+.next/
+.cache/
+.turbo/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+coverage/
+.nyc_output/
+/apps/*/out/
+/apps/*/dist/
+/services/*/dist/
+/packages/*/dist/
+*.log
+
+# Dart / Flutter tooling and generated platform data.
+.dart_tool/
+.pub-cache/
+.pub/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+/apps/mobile/build/
+/apps/mobile/**/ephemeral/
+/apps/mobile/**/.symlinks/
+/apps/mobile/android/.gradle/
+/apps/mobile/android/.kotlin/
+/apps/mobile/android/local.properties
+/apps/mobile/android/key.properties
+/apps/mobile/android/captures/
+/apps/mobile/ios/Pods/
+/apps/mobile/ios/Flutter/Generated.xcconfig
+/apps/mobile/ios/Flutter/flutter_export_environment.sh
+/apps/mobile/ios/Flutter/.last_build_id
+/apps/mobile/ios/Flutter/App.framework/
+/apps/mobile/ios/Flutter/Flutter.framework/
+/apps/mobile/ios/Flutter/Flutter.podspec
+
+# Local signing credentials (never commit private signing material).
+*.jks
+*.keystore
+*.p12
+*.pfx
+
+# OS metadata and editor-local state; shared editor configuration stays trackable.
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.swp
+*.swo
+*~
+/.vscode/*.local.json
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+**/.idea/shelf/
+**/xcuserdata/
+*.xcuserstate
+
+# Reserved local infrastructure directories, not infrastructure source files.
+/infrastructure/**/.local/
+/infrastructure/**/secrets/
+/infrastructure/**/backups/
+/infrastructure/**/runtime/
+/infrastructure/**/.data/
+
+# Keep lockfiles, migrations, Docker configuration, and application source tracked.
+# Store backup dumps in the ignored infrastructure backups directories above.

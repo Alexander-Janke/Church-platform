@@ -1,0 +1,6 @@
+# Normalize detected text to LF; binary files retain Git's automatic detection.
+* text=auto eol=lf
+
+# Windows command scripts use CRLF on checkout, with normalized repository text.
+*.bat text eol=crlf
+*.cmd text eol=crlf
