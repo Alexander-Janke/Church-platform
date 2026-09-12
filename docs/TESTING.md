@@ -1,0 +1,1899 @@
+# Church Platform – Testing and Quality Specification
+
+## 1. Purpose
+
+This document defines the mandatory testing and quality requirements for the Church Platform.
+
+The goal is not only to verify that features work.
+
+Tests must also prove that:
+
+- tenant isolation works
+- permissions work
+- sensitive data remains protected
+- regressions are detected
+- database changes are safe
+- critical workflows remain functional
+- web and mobile builds remain healthy
+- background jobs behave correctly
+- production deployments are not based on unverified code
+
+A feature is not complete simply because it appears to work manually.
+
+---
+
+# 2. Quality Principles
+
+The project follows these principles:
+
+1. Test important behavior, not implementation trivia.
+2. Security boundaries require automated tests.
+3. Negative tests are mandatory.
+4. Tenant isolation is release-critical.
+5. Permission changes require regression tests.
+6. Important business rules belong in automated tests.
+7. Critical workflows should have end-to-end coverage.
+8. Tests must be deterministic.
+9. Tests must not depend on production data.
+10. Failing tests must not be ignored to make CI pass.
+11. Test code is production-quality project code.
+12. New features should include tests in the same change.
+
+---
+
+# 3. Test Layers
+
+Use several complementary test layers.
+
+Recommended categories:
+
+- static analysis
+- unit tests
+- service/domain tests
+- integration tests
+- database tests
+- authorization tests
+- tenant isolation tests
+- API tests
+- background job tests
+- frontend component tests
+- end-to-end tests
+- security-focused tests
+
+Not every feature requires every test type.
+
+The test strategy should match the risk of the feature.
+
+---
+
+# 4. Test Pyramid
+
+Prefer many fast tests and fewer expensive end-to-end tests.
+
+Conceptual structure:
+
+```text
+           End-to-End Tests
+          /                \
+       Integration / API Tests
+      /                      \
+   Service / Domain / Unit Tests
+  /                            \
+Static Analysis / Lint / Type Checks
+```
+
+Do not attempt to verify every edge case only through slow browser tests.
+
+---
+
+# 5. Mandatory Checks Before Completion
+
+For a significant implementation, Codex must run all relevant available checks.
+
+At minimum consider:
+
+- formatter
+- linter
+- type checking
+- backend build
+- web build
+- Flutter analysis
+- unit tests
+- integration tests
+- authorization tests
+- tenant isolation tests
+- database migration tests
+- relevant end-to-end tests
+
+Codex must not claim a task is complete if known relevant checks are failing.
+
+---
+
+# 6. Definition of Done
+
+A feature is complete only when applicable requirements are satisfied.
+
+At minimum:
+
+- code builds successfully
+- formatting passes
+- linting passes
+- type checks pass
+- relevant tests pass
+- tenant isolation remains intact
+- authorization checks are covered
+- loading states are handled
+- empty states are handled
+- error states are handled
+- permission-denied states are handled
+- accessibility considerations are handled
+- no sensitive information is exposed in logs
+- database migrations are included where needed
+- documentation is updated where behavior changed
+
+---
+
+# 7. Unit Tests
+
+Unit tests should cover isolated business logic.
+
+Examples:
+
+- duty fairness calculation
+- date calculations
+- eligibility rules
+- event capacity calculations
+- membership state transitions
+- permission helpers
+- validation functions
+- notification preference logic
+- waitlist ordering
+
+Unit tests should:
+
+- be fast
+- avoid unnecessary infrastructure
+- avoid network access
+- have clear inputs and expected outputs
+
+---
+
+# 8. Domain and Service Tests
+
+Important business behavior should be tested at the domain/service layer.
+
+Examples:
+
+- accepting a membership request
+- assigning a duty
+- requesting a replacement
+- moving a participant from waitlist to confirmed
+- transferring church ownership
+- converting a child profile to an independent account
+- removing a member from active planning
+- creating notifications for an important message
+
+These tests should verify business invariants.
+
+---
+
+# 9. Integration Tests
+
+Integration tests verify multiple real application components working together.
+
+Examples:
+
+- API + database
+- service + repository layer
+- background job + database
+- authentication + authorization
+- file metadata + object storage abstraction
+
+Prefer realistic integration tests for security-critical data access.
+
+---
+
+# 10. Database Tests
+
+Database-dependent behavior must be tested against the actual database technology where practical.
+
+Primary database:
+
+PostgreSQL
+
+Do not rely only on a simplified in-memory database if PostgreSQL-specific behavior matters.
+
+Examples:
+
+- foreign keys
+- unique constraints
+- transaction behavior
+- locking
+- indexes
+- JSON behavior
+- concurrent operations
+
+---
+
+# 11. Migration Tests
+
+Database migrations must be testable.
+
+CI should verify where practical:
+
+1. empty database can migrate to latest version
+2. migrations apply successfully in order
+3. application starts against migrated schema
+
+For important schema changes, also test upgrade behavior from a representative earlier schema state.
+
+Destructive migrations require additional review.
+
+---
+
+# 12. Mandatory Tenant Isolation Tests
+
+Tenant isolation tests are mandatory.
+
+This is one of the most important testing rules in the project.
+
+For every service, API, or repository accessing church-specific data, tests must prove that one tenant cannot access another tenant's protected data.
+
+---
+
+# 13. Standard Tenant Test Pattern
+
+For tenant-specific functionality, create at least:
+
+```text
+Tenant A
+Tenant B
+
+User A → belongs to Tenant A
+User B → belongs to Tenant B
+
+Resource A → belongs to Tenant A
+Resource B → belongs to Tenant B
+```
+
+Then verify:
+
+```text
+User A can access Resource A
+User A cannot access Resource B
+
+User B can access Resource B
+User B cannot access Resource A
+```
+
+Changing IDs manually must not bypass authorization.
+
+---
+
+# 14. Tenant Tests Are Release Blocking
+
+If a tenant isolation test fails:
+
+- the relevant feature is not complete
+- CI must fail
+- production deployment must not proceed
+
+Do not mark tenant tests as optional or flaky.
+
+---
+
+# 15. Cross-Tenant Test Coverage
+
+Tenant isolation tests should cover where applicable:
+
+- read
+- create
+- update
+- delete
+- search
+- exports
+- file downloads
+- realtime subscriptions
+- notifications
+- background jobs
+- bulk operations
+
+Do not test only GET endpoints.
+
+---
+
+# 16. Authorization Tests
+
+Every protected feature must test permissions.
+
+At minimum include:
+
+- authorized user succeeds
+- unauthorized user fails
+- wrong tenant fails
+- wrong object scope fails
+- revoked permission fails
+
+---
+
+# 17. Positive and Negative Permission Tests
+
+Do not write only positive tests.
+
+Bad example:
+
+```text
+Main Admin can update church settings.
+```
+
+Also test:
+
+```text
+Member cannot update church settings.
+Follower cannot update church settings.
+Group Leader cannot update church settings.
+Admin from another tenant cannot update church settings.
+```
+
+---
+
+# 18. Object-Level Authorization Tests
+
+Object-scoped roles require dedicated tests.
+
+Examples:
+
+## Group Leader
+
+Verify:
+
+```text
+Leader of Group A can manage Group A.
+Leader of Group A cannot manage Group B.
+```
+
+## Event Administrator
+
+Verify:
+
+```text
+Admin of Event A can manage Event A.
+Admin of Event A cannot manage Event B.
+```
+
+## Area Leader
+
+Verify:
+
+```text
+Leader of Area A can plan duties in Area A.
+Leader of Area A cannot manage Area B.
+```
+
+## Parent
+
+Verify:
+
+```text
+Parent can manage linked child.
+Parent cannot access unrelated child.
+```
+
+---
+
+# 19. Privilege Escalation Tests
+
+Test that users cannot grant themselves stronger permissions.
+
+Examples:
+
+- member assigns self admin
+- admin grants self Primary Owner
+- church admin grants self platform superadmin
+- Area Leader assigns ownership permission
+- user modifies request body to include protected role
+
+All such attempts must fail.
+
+---
+
+# 20. Primary Owner Tests
+
+Test critical ownership rules.
+
+At minimum:
+
+- exactly one Primary Owner exists
+- Main Admin cannot remove Primary Owner
+- Main Admin cannot transfer ownership
+- Primary Owner can initiate valid transfer
+- invalid receiving user is rejected
+- cross-tenant ownership transfer fails
+- ownership transfer is atomic
+- audit event is created
+
+---
+
+# 21. Authentication Tests
+
+Authentication tests should cover:
+
+- registration
+- email verification
+- valid login
+- invalid password
+- password reset
+- password reset token expiry
+- password reset token single-use behavior
+- logout
+- session revocation
+- multiple sessions
+- email change verification
+
+---
+
+# 22. 2FA Tests
+
+When 2FA is implemented, test:
+
+- enrollment
+- valid code
+- invalid code
+- expired/old code where applicable
+- recovery code
+- recovery code single-use
+- 2FA removal
+- mandatory 2FA role enforcement
+
+Mandatory roles include:
+
+- Primary Owner
+- main church administrators
+- platform superadmins
+
+---
+
+# 23. Session Tests
+
+Test:
+
+- active session accepted
+- revoked session rejected
+- expired session rejected
+- logout invalidates intended session
+- logout-all invalidates intended sessions
+- deleted/disabled account cannot continue using old session
+
+---
+
+# 24. Sensitive Data Tests
+
+Highly sensitive data needs explicit access tests.
+
+Examples:
+
+- child medical information
+- allergies
+- emergency contacts
+- pickup permissions
+- administrative member notes
+- private prayer content
+- direct messages
+- Bible notes
+
+For each sensitive resource, test both:
+
+- permitted access
+- denied access
+
+---
+
+# 25. Child Data Tests
+
+At minimum test:
+
+```text
+Parent → own linked child → allowed
+Parent → unrelated child → denied
+
+Authorized worker → assigned child/event → allowed where permitted
+Worker → unrelated child/event → denied
+
+Normal member → child medical data → denied
+
+Superadmin → child medical data → denied by default
+```
+
+---
+
+# 26. Private Content Tests
+
+Test that protected private content cannot be accessed through alternate paths.
+
+Examples:
+
+Private direct message must not appear via:
+
+- generic search
+- admin member API
+- superadmin content listing
+- logs
+- notifications containing full private content
+
+Private Bible note must not appear via church admin APIs.
+
+Private prayer request must not appear in public or unauthorized feeds.
+
+---
+
+# 27. Search Security Tests
+
+Search tests must verify that search does not leak restricted resources.
+
+Examples:
+
+A user must not discover:
+
+- hidden group names
+- private prayer titles
+- restricted event names
+- administrative notes
+- child information
+- unauthorized members
+- private messages
+
+Also test search suggestions/autocomplete where implemented.
+
+---
+
+# 28. Response Filtering Tests
+
+API responses must return only allowed fields.
+
+Example:
+
+A normal member directory request may return:
+
+```text
+username
+profile picture
+permitted profile fields
+```
+
+It must not accidentally return:
+
+```text
+admin notes
+medical information
+private address
+protected phone number
+internal flags
+```
+
+Use explicit tests for sensitive response DTOs.
+
+---
+
+# 29. Validation Tests
+
+Every API boundary should have validation tests.
+
+Test:
+
+- missing required field
+- invalid enum
+- invalid identifier
+- too-long string
+- invalid date
+- invalid relationship
+- unexpected protected field
+- malformed payload
+
+Do not only test valid requests.
+
+---
+
+# 30. Mass Assignment Tests
+
+Test that request payloads cannot update protected fields.
+
+Example malicious request:
+
+```json
+{
+  "displayName": "Test",
+  "isSuperAdmin": true
+}
+```
+
+The protected field must be:
+
+- rejected
+- or ignored according to explicit API design
+
+It must never modify privileges.
+
+---
+
+# 31. Event Tests
+
+Event tests should cover relevant functionality such as:
+
+- creation
+- editing
+- audience eligibility
+- registration
+- cancellation
+- capacity
+- waitlist
+- pricing categories
+- payment status
+- guest registration
+- age restrictions
+- check-in
+- event administrator scope
+
+---
+
+# 32. Event Capacity Concurrency Tests
+
+Critical capacity logic should test concurrent behavior.
+
+Example:
+
+Event has one remaining place.
+
+Two users attempt to register at nearly the same time.
+
+Expected:
+
+- only one receives the final confirmed place
+- the other receives correct waitlist/full behavior
+- capacity is never exceeded
+
+---
+
+# 33. Waitlist Tests
+
+Test:
+
+- correct ordering
+- participant cancellation
+- automatic advancement where enabled
+- advancement does not exceed capacity
+- duplicate advancement does not occur
+- retries remain idempotent
+
+---
+
+# 34. Duty Planning Tests
+
+Test:
+
+- eligible member selection
+- skill requirements
+- absence handling
+- desired frequency
+- conflicts
+- cross-church conflicts where applicable
+- fairness hints
+- replacement requests
+- assignment scope
+
+---
+
+# 35. Automatic Duty Planning Tests
+
+Rule-based automatic planning must be deterministic enough to test.
+
+Test:
+
+- only eligible people considered
+- unavailable people excluded
+- skill requirements honored
+- conflicts detected
+- workload considered
+- result remains draft
+- no automatic publishing occurs
+- reason returned when no eligible person exists
+
+---
+
+# 36. Group Tests
+
+Test:
+
+- group creation
+- visible/hidden behavior
+- joining modes
+- join request handling
+- group leader scope
+- member removal
+- file access
+- group chat authorization
+- group prayer authorization
+
+---
+
+# 37. Membership Tests
+
+Test:
+
+- follow church
+- membership request
+- request acceptance
+- request rejection
+- follower-to-member transition
+- no duplicate person relationship
+- inactive status
+- left-church status
+- loss of active permissions after leaving
+
+---
+
+# 38. Member Removal Tests
+
+When a member leaves or is removed, test that access is removed from:
+
+- internal feed
+- member directory
+- groups
+- duties
+- files
+- internal prayer content
+
+unless another valid relationship explicitly grants access.
+
+---
+
+# 39. Notification Tests
+
+Test:
+
+- intended recipient receives notification
+- unauthorized user does not receive notification
+- user preference respected
+- security notifications bypass optional disable settings where designed
+- revoked access prevents sensitive content opening
+- notification creation is idempotent where necessary
+
+---
+
+# 40. Push Notification Privacy Tests
+
+For sensitive contexts, test that push payloads do not expose unnecessary private information.
+
+Prefer generic notification previews for:
+
+- direct messages
+- sensitive child information
+- private prayer content
+
+---
+
+# 41. Background Job Tests
+
+Background jobs should test:
+
+- successful execution
+- retry behavior
+- idempotency
+- permanent failure handling
+- correct tenant scope
+- no duplicate side effect
+
+Examples:
+
+- emails
+- push notifications
+- imports
+- scheduled feed publishing
+- deletion jobs
+- reminders
+
+---
+
+# 42. Idempotency Tests
+
+If a job or API may be retried, test repeat execution.
+
+Example:
+
+A notification job runs twice.
+
+Expected:
+
+- no unintended duplicate message if operation is intended to be exactly-once from user perspective
+
+Idempotency requirements depend on the operation.
+
+---
+
+# 43. File Upload Tests
+
+Test:
+
+- valid file accepted
+- unsupported type rejected
+- oversized file rejected
+- unsafe filename handled
+- malicious path sequences ignored
+- private file access protected
+- cross-tenant file access denied
+
+---
+
+# 44. File Authorization Tests
+
+Example:
+
+```text
+User A belongs to Group A.
+File A belongs to Group A.
+
+User A → File A → allowed.
+
+User B has no Group A access.
+User B → File A → denied.
+```
+
+Possession of an object key or guessed URL must not bypass authorization.
+
+---
+
+# 45. Import Tests
+
+Test imports with:
+
+- valid file
+- invalid file
+- missing columns
+- invalid values
+- duplicate data
+- wrong tenant references
+- very large import within supported limit
+- formula-like spreadsheet values where relevant
+
+Imports must never create data in another tenant.
+
+---
+
+# 46. Export Tests
+
+Test:
+
+- authorized export succeeds
+- unauthorized export denied
+- export contains only correct tenant data
+- sensitive fields follow permission rules
+- generated link is protected
+- link expires where designed
+
+---
+
+# 47. Deletion Tests
+
+Test account and church deletion workflows.
+
+Examples:
+
+- deletion request creation
+- protection/transition period
+- cancellation where supported
+- final processing
+- anonymization
+- retained historical references
+- permission requirements
+- audit event
+
+---
+
+# 48. Audit Log Tests
+
+Test that critical actions create audit records.
+
+Examples:
+
+- role assignment
+- role removal
+- ownership transfer
+- member status change
+- sensitive access where required
+- export
+- church deletion request
+- recovery action
+
+Also verify that audit records do not store secret values.
+
+---
+
+# 49. Audit Immutability Tests
+
+Normal application permissions must not allow historical audit records to be silently edited or deleted.
+
+Where audit retention cleanup exists, it must use a controlled process.
+
+---
+
+# 50. API Tests
+
+API tests should verify:
+
+- status codes
+- response schemas
+- validation behavior
+- authentication
+- authorization
+- tenant isolation
+- response filtering
+- pagination
+- error format
+
+---
+
+# 51. Error Contract Tests
+
+API errors should use a consistent structure.
+
+Example:
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "You do not have permission to perform this action."
+  }
+}
+```
+
+Tests should avoid relying excessively on human-readable message text where stable error codes are available.
+
+---
+
+# 52. Pagination Tests
+
+For paginated endpoints test:
+
+- first page
+- next page
+- empty page
+- page size limits
+- stable ordering
+- tenant filtering
+- authorization filtering
+
+No page may expose unauthorized records.
+
+---
+
+# 53. Frontend Component Tests
+
+Use component tests for reusable UI behavior.
+
+Examples:
+
+- permission-aware navigation
+- forms
+- validation messages
+- loading states
+- error states
+- empty states
+- dialogs
+- important message confirmation
+- event registration components
+
+Do not over-test static markup.
+
+---
+
+# 54. Web Tests
+
+Web application checks should include where applicable:
+
+- formatting
+- linting
+- TypeScript checks
+- unit/component tests
+- production build
+
+A feature that works in development mode but fails production build is not complete.
+
+---
+
+# 55. Flutter Tests
+
+Mobile checks should include where applicable:
+
+- formatting
+- static analysis
+- unit tests
+- widget tests
+- integration tests
+
+The application should build for supported targets as part of release validation.
+
+---
+
+# 56. Accessibility Tests
+
+Automated accessibility checks should be used where practical.
+
+Web examples:
+
+- missing labels
+- invalid ARIA
+- keyboard issues
+- contrast warnings where tooling supports it
+
+Manual accessibility review is still required for important workflows.
+
+---
+
+# 57. Localization Tests
+
+Test that:
+
+- German works
+- English works
+- Portuguese works
+- untranslated keys are detectable
+- layouts tolerate longer translations
+- dates and times display appropriately
+- hardcoded UI strings are minimized
+
+---
+
+# 58. Time Zone Tests
+
+Event and calendar functionality should include tests for time zones.
+
+Examples:
+
+- event stored consistently
+- display correct for user
+- recurring event behavior
+- daylight-saving transitions
+
+Do not assume server local time.
+
+---
+
+# 59. End-to-End Tests
+
+End-to-end tests should cover critical user journeys.
+
+They should not attempt to test every combination.
+
+Initial critical E2E scenarios should eventually include:
+
+1. user registration and login
+2. church creation
+3. church membership request and acceptance
+4. role assignment
+5. event creation and registration
+6. group membership
+7. duty request and acceptance
+8. child registration/check-in
+9. important message confirmation
+10. permission denial for unauthorized user
+
+---
+
+# 60. Tenant Isolation E2E Test
+
+At least one E2E security scenario should explicitly use two churches.
+
+Example:
+
+```text
+Create Church A.
+Create Church B.
+
+Create Admin A.
+Create Admin B.
+
+Admin A creates private event in Church A.
+
+Admin B manually navigates to Event A URL/API resource.
+
+Expected:
+Access denied.
+```
+
+This complements lower-level isolation tests.
+
+---
+
+# 61. Test Data
+
+Automated tests must use:
+
+- factories
+- fixtures
+- synthetic accounts
+- deterministic fake data
+
+Do not depend on real users or production records.
+
+---
+
+# 62. Test Factories
+
+Create reusable factories for common entities.
+
+Examples:
+
+- platform user
+- church
+- membership
+- role
+- permission
+- group
+- event
+- duty
+- child
+- registration
+
+Factories should make security tests easy to understand.
+
+---
+
+# 63. Test Isolation
+
+Tests should not depend on execution order.
+
+Each test must establish its own required state or use reliable setup helpers.
+
+Avoid hidden shared mutable state.
+
+---
+
+# 64. Test Cleanup
+
+Integration tests should clean up safely or use isolated databases/schemas.
+
+A failed test must not corrupt later tests.
+
+Parallel execution should be considered when designing test data.
+
+---
+
+# 65. Deterministic Tests
+
+Avoid unnecessary randomness.
+
+When random values are needed:
+
+- seed randomness where possible
+- record failing seed
+- avoid time-dependent nondeterminism
+
+---
+
+# 66. Time-Based Tests
+
+Use controllable clocks where possible for logic involving:
+
+- expiry
+- reminders
+- scheduled posts
+- deletion periods
+- registration deadlines
+- prayer expiry
+
+Do not fill tests with long real waits.
+
+---
+
+# 67. External Provider Tests
+
+Third-party systems should normally be abstracted.
+
+Examples:
+
+- email provider
+- push provider
+- object storage
+- OAuth providers
+
+Unit/integration tests should use controlled fakes or test environments.
+
+Do not send real customer emails from automated tests.
+
+---
+
+# 68. Contract Tests
+
+Where external service abstractions are important, use contract tests or adapter tests.
+
+Examples:
+
+- object storage adapter
+- email adapter
+- push notification adapter
+
+This reduces provider lock-in.
+
+---
+
+# 69. Performance Tests
+
+Do not prematurely create large performance suites.
+
+However important endpoints should avoid obvious performance regressions.
+
+Candidate scenarios later include:
+
+- member directory
+- feed
+- calendar
+- global search
+- event registrations
+- large churches
+
+Measure realistic workloads before optimizing.
+
+---
+
+# 70. N+1 Regression Tests
+
+Where the data access framework permits useful detection, protect important list endpoints against obvious N+1 query regressions.
+
+Examples:
+
+- member lists
+- event lists
+- group lists
+- duty planning views
+
+---
+
+# 71. Load and Stress Testing
+
+Before substantial production scale, perform load tests for high-volume flows.
+
+Potential scenarios:
+
+- Sunday morning app usage
+- push notification fan-out
+- popular event registration opening
+- church-wide important message
+- large import
+
+This is not required for every development task.
+
+---
+
+# 72. Security Scanning
+
+CI should include appropriate automated security checks.
+
+Consider:
+
+- dependency vulnerability scanning
+- secret scanning
+- static security analysis
+- container image scanning
+- dependency update automation
+
+These tools complement tests; they do not replace authorization tests.
+
+---
+
+# 73. Secret Scanning
+
+Repository checks should detect likely committed secrets.
+
+A detected real secret must be considered compromised.
+
+Removing it from the latest commit alone is not sufficient.
+
+Rotate the secret where necessary.
+
+---
+
+# 74. Dependency Updates
+
+Automated dependency updates may create pull requests.
+
+They must run the normal test suite.
+
+Do not auto-merge major security-sensitive dependency changes without appropriate validation.
+
+---
+
+# 75. CI Pipeline
+
+The target pull request pipeline should conceptually run:
+
+```text
+Checkout
+   ↓
+Install dependencies
+   ↓
+Formatting check
+   ↓
+Lint
+   ↓
+Type/static analysis
+   ↓
+Unit tests
+   ↓
+Integration tests
+   ↓
+Authorization tests
+   ↓
+Tenant isolation tests
+   ↓
+Build
+   ↓
+Relevant E2E tests
+   ↓
+Security checks
+```
+
+Exact jobs may run in parallel.
+
+---
+
+# 76. Monorepo CI
+
+CI should run only necessary work where practical.
+
+Examples:
+
+A Flutter-only change may not need every unrelated backend test if dependency analysis safely proves independence.
+
+However security-critical shared code changes should trigger all relevant test suites.
+
+Do not over-optimize CI at the expense of reliability during early development.
+
+---
+
+# 77. Pull Request Requirements
+
+A pull request should not be merged when:
+
+- required CI is failing
+- required tests were skipped without explanation
+- security-critical TODOs remain
+- unresolved migration failure exists
+- tenant isolation tests fail
+- authorization tests fail
+
+---
+
+# 78. Flaky Tests
+
+Flaky tests must be treated as defects.
+
+Do not normalize repeatedly retrying unreliable tests indefinitely.
+
+If a test is flaky:
+
+1. investigate cause
+2. fix it
+3. only temporarily quarantine if absolutely necessary
+4. document the reason
+
+Security tests should not be casually quarantined.
+
+---
+
+# 79. Skipped Tests
+
+Skipped tests require a reason.
+
+Do not commit large amounts of:
+
+```text
+skip
+disabled
+todo
+```
+
+to make a suite green.
+
+Security and tenant tests may not be silently disabled.
+
+---
+
+# 80. Test Coverage
+
+Code coverage may be measured.
+
+Coverage percentage is a signal, not the main goal.
+
+Do not write meaningless tests merely to increase coverage.
+
+High-risk code should receive stronger coverage.
+
+Examples:
+
+- permissions
+- tenant filtering
+- authentication
+- child data
+- ownership transfer
+- event capacity
+- payment status logic
+- deletion flows
+
+---
+
+# 81. Regression Tests
+
+Every confirmed bug should normally receive a regression test when practical.
+
+Process:
+
+1. reproduce bug with failing test
+2. implement fix
+3. confirm test passes
+4. keep test permanently
+
+This is especially important for security bugs.
+
+---
+
+# 82. Bug Reproduction
+
+Codex should attempt to reproduce reported defects before making broad changes.
+
+Do not rewrite large modules solely because a bug is unclear.
+
+Prefer targeted diagnosis.
+
+---
+
+# 83. Test Naming
+
+Test names should describe behavior.
+
+Good:
+
+```text
+denies event update when admin belongs to another tenant
+```
+
+Poor:
+
+```text
+testEvent2
+```
+
+Security tests should make the boundary obvious.
+
+---
+
+# 84. Arrange / Act / Assert
+
+Tests should generally be easy to read.
+
+Recommended conceptual form:
+
+```text
+Arrange
+Act
+Assert
+```
+
+Avoid heavily abstracted test helpers that hide the security scenario.
+
+---
+
+# 85. Test Assertions
+
+Assert meaningful outcomes.
+
+Example:
+
+Do not only assert:
+
+```text
+HTTP status != 500
+```
+
+Instead assert:
+
+```text
+HTTP 403
+resource unchanged
+no audit action claiming success
+```
+
+where appropriate.
+
+---
+
+# 86. Database State Assertions
+
+For mutation operations, verify both response and resulting state.
+
+Example:
+
+Unauthorized member deletion request:
+
+- returns forbidden
+- member still exists
+- membership state unchanged
+
+---
+
+# 87. Side Effect Assertions
+
+Important operations may have side effects.
+
+Examples:
+
+Accept membership request may:
+
+- update request
+- create membership
+- create notification
+- create audit record
+
+Tests should validate important side effects.
+
+---
+
+# 88. Transaction Tests
+
+Operations using transactions should test failure behavior where practical.
+
+Example:
+
+Ownership transfer fails midway.
+
+Expected:
+
+- old owner remains owner
+- new owner does not partially gain ownership
+- tenant still has exactly one Primary Owner
+
+---
+
+# 89. Concurrency Tests
+
+Use concurrency tests for high-risk race conditions.
+
+Examples:
+
+- final event place
+- waitlist promotion
+- ownership transfer
+- claiming limited helper slots
+- duplicate membership acceptance
+
+---
+
+# 90. Realtime Tests
+
+When realtime features are implemented, test:
+
+- authorized connection
+- unauthorized channel denied
+- wrong tenant denied
+- permission revocation
+- disconnected session
+- event delivery to correct audience
+
+---
+
+# 91. Chat Tests
+
+Chat testing should include:
+
+- valid conversation participant
+- non-participant denied
+- group chat access
+- removed group member behavior
+- block behavior
+- report behavior
+- private message data not exposed in logs/admin endpoints
+
+---
+
+# 92. Moderation Tests
+
+Test:
+
+- authorized moderation
+- unauthorized moderation denied
+- tenant boundaries
+- report workflow
+- audit events
+- platform escalation where implemented
+
+---
+
+# 93. Feature Flag Tests
+
+If feature flags are used:
+
+- disabled feature should not be accidentally accessible through API
+- enabled feature works
+- permission checks still apply
+
+Feature flags never replace permissions.
+
+---
+
+# 94. Offline Behavior Tests
+
+When offline caching exists, test important behavior such as:
+
+- loaded data readable offline where intended
+- sensitive write clearly fails/queues according to design
+- reconnect refresh works
+- stale authorization does not grant new server access
+
+---
+
+# 95. Compatibility Tests
+
+Support current intended platform versions.
+
+Avoid maintaining unnecessary compatibility with obsolete browser/mobile versions unless explicitly required.
+
+Browser support policy should be documented once chosen.
+
+---
+
+# 96. Staging Verification
+
+After successful CI and staging deployment, verify critical changes in staging.
+
+Possible checks:
+
+- application starts
+- migrations succeeded
+- login works
+- changed feature works
+- authorization still works
+- no obvious runtime errors
+
+Staging verification complements automated CI.
+
+---
+
+# 97. Production Smoke Tests
+
+After production deployment, run safe smoke checks.
+
+Examples:
+
+- health endpoint
+- public web app loads
+- login entry point works
+- API responds
+- database connectivity healthy
+- worker healthy
+
+Do not run destructive tests against production.
+
+---
+
+# 98. Monitoring After Deployment
+
+Deployment completion does not end verification.
+
+Monitor:
+
+- error rate
+- failed jobs
+- health checks
+- database errors
+- authentication failures
+- performance anomalies
+
+Rollback should be available for serious regressions.
+
+---
+
+# 99. Codex Workflow for Feature Development
+
+Before coding a significant feature, Codex should:
+
+1. read relevant documentation
+2. inspect existing code
+3. identify security boundaries
+4. identify permissions
+5. identify tenant scope
+6. identify database changes
+7. identify required tests
+8. create concise implementation plan
+
+Then:
+
+9. implement code
+10. add or update tests
+11. run formatter
+12. run lint/static checks
+13. run relevant unit tests
+14. run relevant integration tests
+15. run authorization tests
+16. run tenant isolation tests
+17. run build checks
+18. run E2E tests where applicable
+19. inspect failures
+20. fix failures
+21. rerun relevant checks
+22. inspect git diff
+23. summarize implementation and test results
+
+---
+
+# 100. Codex Completion Report
+
+For significant coding tasks, Codex should report:
+
+- what changed
+- important architectural decisions
+- database migrations
+- permissions added/changed
+- tests added/changed
+- commands/checks executed
+- whether they passed
+- any known limitations
+- any unresolved risks
+
+Do not report a test as passed if it was not executed.
+
+Use language such as:
+
+```text
+Not run: Flutter integration tests because the required emulator was unavailable.
+```
+
+instead of pretending success.
+
+---
+
+# 101. No Fake Verification
+
+Codex must never claim:
+
+- tests passed
+- build passed
+- migration works
+- deployment works
+
+unless the relevant command or verification was actually performed.
+
+If an environment prevents execution, report that clearly.
+
+---
+
+# 102. Critical Test Priority
+
+When time or environment limits prevent every test from running, prioritize:
+
+1. tenant isolation
+2. authorization
+3. authentication/security
+4. critical business rules
+5. database migrations
+6. affected unit/integration tests
+7. builds
+8. UI and E2E tests
+
+This does not permanently waive skipped tests.
+
+---
+
+# 103. Test Review Rule
+
+Before finishing a feature, ask:
+
+- What happens with another tenant?
+- What happens with a weaker role?
+- What happens with another user's resource?
+- What happens when permission is revoked?
+- What happens when input is invalid?
+- What happens if the request happens twice?
+- What happens if two requests happen concurrently?
+- What sensitive data could leak?
+
+Add tests where these questions reveal meaningful risk.
+
+---
+
+# 104. Initial CI Goals
+
+During early project setup, prioritize getting these checks working first:
+
+```text
+Backend formatting/lint/type checking
+Backend unit tests
+Backend integration tests
+Tenant isolation tests
+Web formatting/lint/type checking/build
+Flutter format/analyze/tests
+```
+
+E2E testing can grow alongside real user flows.
+
+---
+
+# 105. Future Test Infrastructure
+
+As the project grows, consider:
+
+- isolated CI PostgreSQL
+- Redis test service
+- object storage test service
+- browser automation
+- mobile integration testing
+- test reporting
+- coverage reports
+- performance test environment
+
+Introduce infrastructure as needed rather than all at once.
+
+---
+
+# 106. Testing Decision Rule
+
+When deciding whether a test is needed, consider:
+
+1. security impact
+2. data sensitivity
+3. tenant boundary
+4. permission boundary
+5. financial/administrative impact
+6. concurrency risk
+7. likelihood of regression
+8. complexity of business rule
+
+The higher the risk, the stronger the required automated testing.
+
+---
+
+# 107. Relationship to Other Documents
+
+Product behavior:
+
+`docs/PRODUCT.md`
+
+Architecture:
+
+`docs/ARCHITECTURE.md`
+
+Security:
+
+`docs/SECURITY.md`
+
+Permissions:
+
+`docs/PERMISSIONS.md`
+
+Roadmap:
+
+`docs/ROADMAP.md`
+
+This document defines testing and verification expectations for implementation work.
+
+---
+
+# 108. Final Quality Rule
+
+A feature is not done when the code exists.
+
+A feature is done when:
+
+```text
+it works
++
+it is authorized correctly
++
+tenant isolation is proven
++
+important failure cases are handled
++
+relevant automated tests pass
++
+the project still builds
+```
+
+For this platform, functional correctness without authorization and tenant-isolation testing is incomplete implementation.
