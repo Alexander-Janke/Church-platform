@@ -239,6 +239,8 @@ This is one of the most important testing rules in the project.
 
 For every service, API, or repository accessing church-specific data, tests must prove that one tenant cannot access another tenant's protected data.
 
+From the first real tenant-owned tables/services, use real PostgreSQL and the actual runtime role to test RLS reads/writes, cross-tenant constraints, missing/incorrect context, and pooled/concurrent connection isolation. Cover bulk operations, joins, aggregates, search, and exports as introduced. The mandatory matrix is defined in [ADR 0006](adr/0006-tenancy-and-authorization.md); these tests must not wait for later product phases. Positive public/follower tests must also prove that legitimate access does not require membership.
+
 ---
 
 # 13. Standard Tenant Test Pattern
@@ -606,10 +608,7 @@ Example malicious request:
 }
 ```
 
-The protected field must be:
-
-- rejected
-- or ignored according to explicit API design
+Unknown fields and protected fields outside the accepted request DTO must be rejected.
 
 It must never modify privileges.
 

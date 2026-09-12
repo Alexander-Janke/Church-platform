@@ -38,6 +38,8 @@ Every protected operation must determine:
 
 Frontend permission checks improve usability but are not security boundaries.
 
+Apply only the relevant stages to each resource: public church content needs no membership, following requires authentication, and follower/member/object/administrative access follows its own policy. Non-tenant resources use ownership, participant, or platform policies. [ADR 0006](adr/0006-tenancy-and-authorization.md) defines these access classes and the application-authorization-plus-RLS boundary.
+
 ---
 
 # 3. Permission Philosophy
@@ -271,7 +273,6 @@ The platform should provide useful standard roles.
 
 Suggested initial roles:
 
-- Member
 - Group Leader
 - Area Leader
 - Event Administrator
@@ -281,6 +282,8 @@ Suggested initial roles:
 - Platform Superadmin
 
 Churches may later create custom roles.
+
+Member capabilities derive from the church relationship, not a manually assigned administrative role. Primary Owner is a protected ownership relationship/capability, and Platform Superadmin is platform-scoped; neither is an ordinary custom church role.
 
 ---
 
@@ -372,6 +375,8 @@ church.owner.transfer
 ```
 
 `church.delete` and `church.owner.transfer` are highly privileged.
+
+In V1, church deletion is Primary-Owner-only and cannot be delegated to ordinary custom roles. Ownership transfer requires the protected ownership capability, mandatory 2FA, recent step-up authentication, an audit event, and transactional preservation of exactly one owner.
 
 ---
 
@@ -687,7 +692,7 @@ children.medical_info.view
 
 This permission should be granted only where operationally necessary.
 
-Access may additionally require current event/group context.
+Permission alone is insufficient: access also requires valid operational context, current need-to-know, and appropriate audit logging, including for administrators and the Primary Owner.
 
 ---
 
@@ -1140,6 +1145,8 @@ Primary Owner
 ```
 
 Implementation does not need actual inheritance if explicit permission bundles are clearer.
+
+Here, Member denotes capabilities derived from the current relationship, not an assignable role or automatic membership granted by a leadership role. Primary Owner denotes a protected capability, not a delegable custom-role bundle.
 
 ---
 
@@ -1676,6 +1683,8 @@ Permission changes must preserve or intentionally transform existing role behavi
 
 The following matrix is a product-level starting point.
 
+Follower and Member columns describe relationships; administrative columns describe permissions within their valid tenant/object scope. The matrix does not turn relationships into assignable administrative roles.
+
 | Capability | Follower | Member | Group Leader | Area Leader | Event Admin | Main Admin | Primary Owner |
 |---|---|---|---|---|---|---|---|
 | View public church content | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
@@ -1704,11 +1713,13 @@ This matrix does not replace server-side permission evaluation.
 | Data | Parent/Guardian | Children’s Worker | Event Admin | Main Admin | Primary Owner | Superadmin |
 |---|---|---|---|---|---|---|
 | Child basic profile | Own child | Assigned context | Assigned event if needed | Permission required | Permission required | No default access |
-| Emergency contact | Own child | Permission + context | Permission + context | Permission required | Permission required | No default access |
-| Allergy/medical data | Own child | Explicit permission + context | Explicit permission + context | Explicit permission | Explicit permission | No default access |
-| Pickup authorization | Own child | Permission + context | Permission + context | Permission required | Permission required | No default access |
+| Emergency contact | Own child | Permission + context | Permission + context | Permission + context | Permission + context | No default access |
+| Allergy/medical data | Own child | Explicit permission + context | Explicit permission + context | Explicit permission + context | Explicit permission + context | No default access |
+| Pickup authorization | Own child | Permission + context | Permission + context | Permission + context | Permission + context | No default access |
 
 Administrative rank alone does not automatically justify access to highly sensitive child data.
+
+Highly sensitive access requires explicit permission, valid operational context, current need-to-know, and appropriate auditing. Guardian access derives from the explicitly authorized guardian relationship and allowed actions; it does not require a church worker role.
 
 ---
 
@@ -1720,7 +1731,7 @@ Administrative rank alone does not automatically justify access to highly sensit
 | Direct messages | Conversation participant | No | No | No |
 | Private prayer request | Authorized audience only | No automatic access | No automatic access | No |
 | Admin member notes | No unless explicitly allowed | Permission required | Permission required | No default access |
-| Child medical data | Parent/context permission | Explicit permission | Explicit permission | No default access |
+| Child medical data | Authorized guardian/context permission | Explicit permission + context | Explicit permission + context | No default access |
 
 ---
 

@@ -57,10 +57,12 @@ The application is multi-tenant.
 
 One church equals one tenant.
 
-Every request involving church-specific data must verify:
-1. the authenticated user
-2. tenant membership
-3. the user's permissions inside that tenant
+Every request involving church-specific data must verify the applicable access policy:
+1. the authenticated user when required
+2. the permitted relationship/access class (public, authenticated user, follower, member, object-authorized, or protected administrative/ownership access)
+3. the applicable tenant permissions, object context, and privacy rules
+
+Public resources do not require membership. Protected member resources do. Use trusted server-created tenant context, explicit query scoping, PostgreSQL RLS, and database constraints as defined in `docs/adr/0006-tenancy-and-authorization.md`; RLS does not replace application authorization.
 
 Never trust tenant IDs sent by the client without validating access.
 

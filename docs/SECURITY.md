@@ -308,13 +308,15 @@ Tenant isolation is mandatory.
 
 Every server-side request involving tenant-owned data must verify:
 
-1. authenticated user
+1. authenticated user when required
 2. target tenant
-3. valid relationship to target tenant
-4. required permission
+3. applicable access class/relationship to target tenant
+4. required permissions and privacy rules
 5. object-level access where applicable
 
 Never trust a tenant identifier merely because the client supplied it.
+
+Public church resources do not require membership; authenticated-user, follower, member, object-authorized, administrative, and ownership operations each enforce their applicable policy. Use trusted server-created tenant context, explicit query scoping, transaction-local PostgreSQL RLS from the first tenant-owned tables, and cross-tenant relationship constraints. Missing context fails closed. RLS does not establish entitlement or replace application authorization. See [ADR 0006](adr/0006-tenancy-and-authorization.md).
 
 ---
 
@@ -431,10 +433,12 @@ Other church administrators must not be able to remove or replace the Primary Ow
 Ownership transfer requires:
 
 - authenticated Primary Owner
-- step-up authentication
-- active 2FA where required
+- recent step-up authentication
+- mandatory active 2FA
 - eligible receiving account
 - audit event
+
+Ownership transfer must preserve exactly one Primary Owner transactionally, including concurrent attempts and failures.
 
 The receiving account should explicitly accept ownership where practical.
 
@@ -557,6 +561,8 @@ Possible authorized users may include:
 - specific event staff
 
 Authorization depends on role and context.
+
+Highly sensitive child access requires explicit permission, valid operational context, current need-to-know, and appropriate audit logging. Permission alone is insufficient, including for administrators and the Primary Owner. Guardian access derives from the explicit authorized guardian relationship and its allowed actions.
 
 ---
 
@@ -821,6 +827,8 @@ Validate:
 - identifiers
 
 Reject unexpected data.
+
+Reject unknown fields and protected ownership/privilege fields outside the accepted request DTO. Created tenant ownership comes from validated server context.
 
 Do not silently accept arbitrary extra privileged fields from request payloads.
 
@@ -1375,7 +1383,7 @@ Historical references may remain in anonymized form.
 Church deletion requires:
 
 - authorized user
-- Primary Owner or otherwise explicitly authorized role
+- Primary Owner only in V1; church deletion authority is not delegable to ordinary custom roles
 - step-up authentication
 - protection period
 - audit log

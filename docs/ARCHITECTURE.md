@@ -304,7 +304,7 @@ API design should be consistent.
 Protected endpoints must enforce:
 
 - authentication
-- tenant membership
+- the applicable tenant relationship/access policy (membership only where required)
 - authorization
 - input validation
 
@@ -354,6 +354,8 @@ Use PostgreSQL as the primary relational database.
 
 PostgreSQL is the source of truth for structured application data.
 
+The accepted access stack is Drizzle ORM with the `node-postgres` driver and Drizzle Kit migration tooling. See [ADR 0002: Database Access](adr/0002-database-access.md).
+
 Examples:
 
 - users
@@ -376,6 +378,8 @@ Examples:
 
 All database schema changes must use versioned migrations.
 
+Review generated migrations before application. Production must never use automatic schema synchronization. Use one controlled deployment migration step and separate migration/schema-owner credentials from runtime credentials, as specified in ADR 0002.
+
 Never depend on manually edited production database structures.
 
 Each migration must be:
@@ -395,7 +399,7 @@ One church equals one tenant.
 
 Tenant ownership must be explicit in the data model.
 
-Most church-owned records should contain or derive a clear tenant relationship.
+Tenant-owned tables must have explicit ownership, normally a non-null `church_id`, and RLS from the first real tenant-owned tables.
 
 Conceptually:
 
@@ -411,9 +415,11 @@ or equivalent tenant ownership must be identifiable.
 
 Tenant isolation must be enforced on the server.
 
+Use application authorization, trusted server-created tenant context, explicit repository scoping, transaction-local PostgreSQL RLS, cross-tenant relationship constraints, and mandatory isolation tests. RLS supplements application authorization; it does not establish user entitlement. See [ADR 0006: Tenancy and Authorization](adr/0006-tenancy-and-authorization.md).
+
 Example:
 
-A user who belongs only to Church A must not be able to retrieve:
+A user who belongs only to Church A must not be able to retrieve a protected member-only event in Church B:
 
 ```text
 /api/v1/churches/B/events/123
@@ -422,6 +428,8 @@ A user who belongs only to Church A must not be able to retrieve:
 even if the user manually changes the URL or request body.
 
 Client-supplied tenant identifiers are never sufficient proof of authorization.
+
+Church-related resources may be public, authenticated-user, follower, member, object-authorized, or administratively protected. Public/follower access must not be blocked by blanket membership checks. Non-tenant private resources require their own ownership/participant policies, not synthetic church IDs.
 
 ---
 
@@ -495,8 +503,8 @@ Authorization is not just a frontend concern.
 Every protected backend operation must determine:
 
 1. Who is the user?
-2. Which tenant is involved?
-3. Does the user belong to that tenant?
+2. Which tenant or non-tenant resource scope is involved?
+3. Does the user satisfy the applicable relationship/access policy?
 4. Which roles does the user have?
 5. Does the user have the required permission?
 6. Does additional object-level authorization apply?
@@ -729,7 +737,7 @@ Never:
 2. return restricted matches
 3. rely on the UI to hide them
 
-Authorization must be enforced during or before result delivery.
+Authorization must be enforced during selection, not by retrieving broad cross-tenant data and filtering it afterward in application memory.
 
 ---
 
@@ -1384,14 +1392,15 @@ Suggested location:
 docs/adr/
 ```
 
-Possible future ADRs:
+ADR sequence (accepted records and planned decisions):
 
 ```text
 0001-backend-framework.md
-0002-authentication-strategy.md
-0003-database-access-layer.md
-0004-object-storage-provider.md
-0005-realtime-strategy.md
+0002-database-access.md
+0003-authentication.md
+0004-object-storage.md
+0005-realtime.md
+0006-tenancy-and-authorization.md
 ```
 
 Do not create ADRs for trivial implementation details.

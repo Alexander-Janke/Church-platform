@@ -147,13 +147,7 @@ Do not begin major backend implementation before this decision is documented.
 
 ## 4.3 Database Access Decision
 
-Select and document the database access approach.
-
-Examples may include:
-
-- ORM
-- typed query builder
-- hybrid approach
+Accepted: PostgreSQL with Drizzle ORM, `node-postgres`, and Drizzle Kit. See [ADR 0002](adr/0002-database-access.md) for reviewed migrations and transaction rules, and [ADR 0006](adr/0006-tenancy-and-authorization.md) for application authorization plus RLS.
 
 Requirements:
 
@@ -309,6 +303,8 @@ Initial church fields may include:
 
 Every tenant-owned resource must have a clear tenant relationship.
 
+Introduce explicit repository scoping, transaction-local RLS, ownership constraints, and release-blocking isolation tests with the first tenant-owned tables/services. Do not wait for Phase 1E to prove these boundaries.
+
 ---
 
 # 9. Phase 1D – Tenant Membership
@@ -330,7 +326,7 @@ Membership state must always be scoped to one tenant.
 
 # 10. Phase 1E – Tenant Isolation Test Harness
 
-Before implementing many tenant modules, build reusable test helpers for multi-tenancy.
+Extend the isolation tests introduced with the first tenant-owned tables into reusable helpers for all later tenant modules.
 
 Create common test fixtures:
 
@@ -379,7 +375,6 @@ Use centralized authorization logic.
 
 Initial standard roles should include:
 
-- Member
 - Group Leader
 - Area Leader
 - Event Administrator
@@ -388,6 +383,8 @@ Initial standard roles should include:
 - Primary Owner
 
 Platform Superadmin remains platform-scoped.
+
+Member is a relationship state with derived capabilities, not an assignable administrative role. Primary Owner is a protected ownership relationship/capability.
 
 ---
 
@@ -402,7 +399,7 @@ Required rules:
 - ownership transfer controlled
 - transfer transactional
 - audit event generated
-- step-up authentication supported when security features are ready
+- mandatory 2FA and recent step-up authentication before ownership transfer is enabled
 
 ---
 
@@ -458,7 +455,7 @@ Do not build all administration modules yet.
 
 # 17. Phase 1L – 2FA
 
-Implement 2FA before broad administrative production use.
+Implement 2FA before privileged functionality is enabled, including ownership transfer. Bring the necessary security foundation forward when earlier Phase 1 tasks depend on it.
 
 Mandatory for:
 
@@ -741,9 +738,10 @@ Sources:
 - groups
 - duties
 - registrations
-- children
 
 Add calendar layers.
+
+Child calendar sources/layers are deferred until the child/guardian/sensitive-access foundation in Phase 6 exists.
 
 External calendar integration may follow once the internal calendar is stable.
 
@@ -781,8 +779,9 @@ Implement:
 
 - personal registration
 - guest registration
-- child registration
 - cancellation
+
+Child registration is deferred until the Phase 6 child/guardian/sensitive-access foundation exists; generic guest fields must not bypass this dependency.
 
 Known account information should be prefilled appropriately.
 
@@ -835,7 +834,7 @@ Implement:
 - cancelled
 - no-show
 
-Child checkout comes later with full child profile functionality if not already required.
+Child-specific check-in and checkout are deferred to Phase 6 after the child/guardian/sensitive-access foundation exists.
 
 ---
 
@@ -1256,6 +1255,8 @@ Highly sensitive access should be logged where required.
 ---
 
 # 68. Phase 6D – Child Check-In and Checkout
+
+With Phases 6A–6C established, add the deferred child registration and authorized child calendar behavior before child check-in/out.
 
 Extend event check-in with:
 
@@ -1825,6 +1826,7 @@ Possible early ADRs:
 0003-authentication.md
 0004-object-storage.md
 0005-realtime.md
+0006-tenancy-and-authorization.md
 ```
 
 ADRs should record:
