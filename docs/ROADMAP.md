@@ -164,7 +164,7 @@ Document the decision.
 
 ## 4.4 Authentication Architecture Decision
 
-Select and document the authentication architecture.
+Accepted: Better Auth behind the application-owned NestJS AuthModule, PostgreSQL-backed opaque sessions, TOTP, and explicit assurance/step-up policy. See [ADR 0003](adr/0003-authentication-and-sessions.md).
 
 Must support:
 
@@ -243,6 +243,8 @@ Then add:
 - Apple authentication
 
 Do not expose production social-login credentials in the repository.
+
+Follow ADR 0003 for secure explicit linking, social-only accounts without local passwords, web/mobile session lifetimes, and password-reset revocation of all sessions. Verify supported integration behavior before exposing each flow. Establish the TOTP/recovery and assurance/step-up foundation described in Phase 1L before enabling any privileged role, ownership, or administrative functionality; social login must pass the same assurance gates.
 
 ---
 
@@ -418,6 +420,8 @@ Onboarding should collect:
 
 Create the first Primary Owner during church creation.
 
+The receiving account must satisfy mandatory verified 2FA prerequisites before activating ownership. Do not create an unprotected owner as a temporary onboarding shortcut.
+
 ---
 
 # 15. Phase 1J – Church Verification Foundation
@@ -455,7 +459,7 @@ Do not build all administration modules yet.
 
 # 17. Phase 1L – 2FA
 
-Implement 2FA before privileged functionality is enabled, including ownership transfer. Bring the necessary security foundation forward when earlier Phase 1 tasks depend on it.
+This is a prerequisite for privileged functionality, not a later hardening step: implement the TOTP/recovery, elevation, and step-up foundation alongside authentication, before enabling Phase 1G privileged roles, Phase 1H ownership, Phase 1I owner creation, or Phase 1K administration. Section numbering does not override this dependency.
 
 Mandatory for:
 
@@ -466,6 +470,8 @@ Mandatory for:
 Initially support TOTP.
 
 Include recovery codes.
+
+Apply mandatory 2FA by effective capability, including custom roles, and test Google/Apple cannot bypass it. Use the normal-session, elevation, and five-minute step-up policies in ADR 0003. Factor-disable/recovery and privilege transitions must be safe before these capabilities are enabled.
 
 ---
 
@@ -1823,7 +1829,7 @@ Possible early ADRs:
 ```text
 0001-backend-framework.md
 0002-database-access.md
-0003-authentication.md
+0003-authentication-and-sessions.md
 0004-object-storage.md
 0005-realtime.md
 0006-tenancy-and-authorization.md
@@ -1903,7 +1909,7 @@ The recommended immediate development sequence after documentation is complete i
 10. Backend health endpoint
 11. Web application shell
 12. Flutter application shell
-13. Authentication foundation
+13. Authentication foundation, including TOTP/recovery and assurance/step-up before privileged functionality
 14. User model
 15. Church/tenant model
 16. Tenant isolation test harness

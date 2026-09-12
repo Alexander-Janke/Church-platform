@@ -97,7 +97,11 @@ Critical operations must be auditable.
 
 Normal users may enable 2FA optionally.
 
+Mandatory 2FA follows effective protected capabilities, including custom roles, not only role names. Google/Apple login must not bypass it. Establish the TOTP and assurance foundation before enabling privileged administrative or ownership functionality; disabling/recovering 2FA must never leave protected privileges usable without required assurance.
+
 Critical actions require step-up authentication where specified.
+
+Follow `docs/adr/0003-authentication-and-sessions.md`: Better Auth stays behind the application-owned NestJS AuthModule; PostgreSQL-backed opaque sessions remain server-revocable. Apply its session/elevation lifetimes and five-minute step-up window. Successful password reset revokes all existing sessions. Never silently link accounts by email alone.
 
 ---
 

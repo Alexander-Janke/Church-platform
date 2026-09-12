@@ -35,6 +35,7 @@ Every protected operation must determine:
 5. Which permissions are granted?
 6. Does object-level authorization apply?
 7. Does the requested data contain sensitive information?
+8. Does the current session satisfy the capability's required 2FA, elevation, and recent-authentication assurance?
 
 Frontend permission checks improve usability but are not security boundaries.
 
@@ -57,6 +58,8 @@ Prefer:
 “Allow event editing if user has `events.manage`.”
 
 Roles are bundles of permissions.
+
+Protected permission/capability metadata must specify assurance requirements that custom roles cannot weaken. Primary Owner, Main Church Administrator, Platform Superadmin, and any custom role with protected privileged capabilities require 2FA. Google/Apple login alone cannot bypass this requirement. Apply [ADR 0003](adr/0003-authentication-and-sessions.md) before activating privileges and on each protected operation, including safe factor-disable/recovery transitions. Member remains a relationship state, not an administrative role.
 
 This allows churches to create custom roles later.
 
@@ -1293,7 +1296,7 @@ When a role is removed:
 - future API access must be denied
 - realtime access should update
 - cached authorization should expire or be invalidated
-- relevant privileged sessions may be re-evaluated
+- affected privileged elevation/step-up state must be invalidated as appropriate; current capability authorization must be re-evaluated
 
 ---
 

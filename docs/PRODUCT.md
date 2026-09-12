@@ -211,11 +211,13 @@ Supported registration methods:
 
 Email verification is mandatory before full account use.
 
-Initial registration requires only:
+Initial email/password registration requires only:
 
 - username
 - email
 - password
+
+Google/Apple users do not need an additional local password. Linking authentication methods requires an explicit secure flow with recent authentication; matching email addresses alone must not merge accounts. Privileged access requires the same mandatory 2FA assurance regardless of sign-in method, as defined in [ADR 0003](adr/0003-authentication-and-sessions.md).
 
 Additional profile information may be added later.
 

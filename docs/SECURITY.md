@@ -91,6 +91,8 @@ All important validation and authorization must happen server-side.
 
 Authentication must be centralized.
 
+Use Better Auth behind the application-owned NestJS AuthModule, as accepted in [ADR 0003: Authentication and Sessions](adr/0003-authentication-and-sessions.md). Library defaults never override application authorization or security policy.
+
 Supported initial methods:
 
 - email and password
@@ -98,6 +100,8 @@ Supported initial methods:
 - Apple
 
 Email verification is mandatory before full account use.
+
+Google/Apple users need no additional local password. Account linking/unlinking must be explicit, require recent authentication and appropriate assurance, and prove account/provider control. Never merge accounts solely because email addresses match. Notify users of provider changes where practical.
 
 Authentication must support:
 
@@ -117,12 +121,7 @@ Authentication must support:
 
 Passwords must never be stored in plaintext.
 
-Use a modern password hashing algorithm appropriate for password storage.
-
-Preferred examples:
-
-- Argon2id
-- another current industry-standard password hashing algorithm if justified
+Use a modern memory-hard password hashing algorithm. Argon2id is preferred where the authentication integration permits application-controlled hashing. Select and test parameters during implementation; any integration limitation requires explicit review rather than weaker silent defaults.
 
 Do not use:
 
@@ -161,10 +160,12 @@ Password reset must use:
 After successful password reset:
 
 - invalidate the reset token
-- consider invalidating existing sessions according to security policy
+- revoke all existing account sessions, including mobile sessions and elevation/step-up state
 - notify the user by email
 
 Reset endpoints should be rate-limited.
+
+Password reset must not satisfy or disable mandatory privileged 2FA. Audit successful reset events.
 
 Do not reveal whether an email address exists in the system through obvious response differences.
 
@@ -173,6 +174,8 @@ Do not reveal whether an email address exists in the system through obvious resp
 # 7. Email Address Changes
 
 Users may change their account email address.
+
+Require recent authentication within the five-minute step-up window and the account's required assurance.
 
 The new email must be verified before becoming fully active.
 
@@ -194,15 +197,17 @@ Critical account changes should be audit logged.
 
 2FA is optional for normal users.
 
+Mandatory 2FA follows effective protected capabilities, including custom roles; permission/capability metadata must carry assurance requirements. Google/Apple and other social sign-ins must not bypass TOTP. Enrollment alone is not current-session assurance. Safe grant, disable/reset, recovery, and revocation transitions must prevent protected capabilities remaining usable without required 2FA, as specified in ADR 0003.
+
 Architecture should allow future expansion of supported 2FA methods.
 
-Initial implementation may use:
+Initial implementation uses:
 
 - TOTP authenticator applications
 
 Avoid SMS as the primary recommended method where stronger alternatives are available.
 
-Recovery codes should be supported if 2FA is implemented.
+Support recovery codes with TOTP. Code regeneration/revocation requires an appropriately authorized recent-authentication flow; regeneration invalidates the old set.
 
 Recovery codes must:
 
@@ -216,6 +221,8 @@ Recovery codes must:
 # 9. Step-Up Authentication
 
 Highly sensitive actions require recent re-authentication.
+
+The initial freshness window is five minutes. Linking/unlinking providers and disabling/resetting 2FA also require step-up. Proof must suit the account and operation without forcing social-only users to create a password or downgrading privileged 2FA. A normal session or rolling renewal does not establish recent authentication.
 
 Examples:
 
@@ -267,14 +274,18 @@ Session tokens must:
 - never be logged
 - never appear in analytics data
 
-If JWTs are used, do not assume JWTs remove the need for:
+Use PostgreSQL-backed server-side sessions with opaque credentials, not an application JWT access/refresh architecture initially. Authoritative checks must enforce immediate server-side invalidation; do not enable cookie-cached/stateless acceptance that delays revocation.
 
-- expiration
-- revocation strategy
-- permission checks
-- tenant checks
+Initial policy defaults from ADR 0003:
 
-Short-lived access tokens with a controlled refresh mechanism are preferred over extremely long-lived bearer tokens.
+| Scope | Inactivity | Absolute limit / freshness |
+|---|---|---|
+| Normal web session | 7 days | 30 days absolute |
+| Normal mobile session | 30 days | 90 days absolute |
+| Privileged elevation | 15 minutes | 8 hours maximum |
+| Critical-operation step-up | Not sliding | Authentication within 5 minutes |
+
+Normal session validity, elevated assurance, and recent step-up are distinct. Enforce the earliest applicable expiry server-side; renewal must not reset absolute lifetime or create authentication assurance. Later configuration must not weaken required platform security.
 
 ---
 
@@ -284,19 +295,19 @@ Sensitive authentication tokens must use secure client storage.
 
 Mobile:
 
-Use the operating system's secure credential storage mechanisms where appropriate.
+Store opaque bearer session credentials in operating-system secure storage, never ordinary unprotected preferences. They remain server-revocable.
 
 Web:
 
-Prefer secure, HTTP-only cookies for sensitive session credentials where architecture permits.
+Use HttpOnly cookies, Secure in HTTPS environments, appropriate SameSite, and narrow cookie scope. Do not expose session credentials through ordinary frontend JavaScript or session-list responses.
 
-Avoid placing long-lived authentication tokens in:
+Do not place authentication credentials in:
 
 - localStorage
 - URLs
 - browser history
 
-unless there is a documented and justified security design.
+Cookie names and exact domain topology are deferred to deployment design.
 
 ---
 
@@ -884,7 +895,7 @@ If rich text or HTML is supported, sanitize it using a maintained allowlist-base
 
 # 44. CSRF
 
-If web authentication uses cookies, implement appropriate CSRF protections.
+Cookie-authenticated state-changing requests require appropriate CSRF protections.
 
 Examples may include:
 
@@ -893,6 +904,8 @@ Examples may include:
 - origin validation
 
 The exact approach depends on the chosen authentication architecture.
+
+Validate Origin where applicable and finalize mechanisms against the browser/API topology. CORS is not CSRF protection. Reject unsafe cross-origin credential use; mobile bearer support must not disable browser protections.
 
 ---
 
@@ -1131,9 +1144,13 @@ Super-recovery must:
 
 Do not allow informal manual database changes as the standard recovery procedure.
 
+No master password or universal support bypass is permitted. Recovery must not silently bypass mandatory privileged 2FA; keep protected capabilities unavailable until the approved proof/restoration process is complete.
+
 ---
 
 # 59. Church Admin Recovery
+
+Exceptional Primary Owner recovery is deferred and requires its own explicit security design before implementation. The following are requirements for that future process, not authorization to implement a support bypass now.
 
 If all church administrators lose access, platform superadmin may assist after appropriate verification.
 
@@ -1162,6 +1179,8 @@ Examples:
 - public search
 - reporting
 - invitation endpoints
+
+Also protect TOTP attempts, recovery-code attempts, provider linking, and security-sensitive recovery flows. Rate-limit storage and thresholds are deferred; this does not require Redis now.
 
 Rate limits should consider:
 

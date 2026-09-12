@@ -418,6 +418,8 @@ At minimum:
 
 # 21. Authentication Tests
 
+Authentication tests are release-critical. Apply the full positive/negative matrix in [ADR 0003](adr/0003-authentication-and-sessions.md) against the installed Better Auth/adapter boundary, including Google/Apple, social-only accounts, safe explicit linking, rejected email-only automatic linking, cookie/mobile transport, CSRF/Origin, rate limiting, and absence of secrets from logs. Use controlled clocks and provider test doubles; real PostgreSQL is required when session persistence or revocation behavior matters.
+
 Authentication tests should cover:
 
 - registration
@@ -427,6 +429,7 @@ Authentication tests should cover:
 - password reset
 - password reset token expiry
 - password reset token single-use behavior
+- successful password reset revokes all existing browser/mobile sessions and assurance state
 - logout
 - session revocation
 - multiple sessions
@@ -445,7 +448,7 @@ When 2FA is implemented, test:
 - recovery code
 - recovery code single-use
 - 2FA removal
-- mandatory 2FA role enforcement
+- mandatory 2FA capability enforcement, including custom privileged roles
 
 Mandatory roles include:
 
@@ -456,6 +459,8 @@ Mandatory roles include:
 ---
 
 # 23. Session Tests
+
+Verify the separate web/mobile inactivity and absolute limits, 15-minute/eight-hour elevation limits, and five-minute step-up window from ADR 0003. Test that social login cannot bypass mandatory 2FA, disabling/resetting factors cannot leave unprotected privileges usable, and Primary Owner critical actions require current assurance. Session rotation/renewal must not reset absolute lifetime or manufacture recent authentication.
 
 Test:
 

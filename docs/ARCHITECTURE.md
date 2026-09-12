@@ -451,6 +451,8 @@ Church-specific relationships remain tenant-scoped.
 
 # 13. Authentication
 
+Accepted: Better Auth encapsulated behind the application-owned NestJS AuthModule. Domain modules depend on application authentication abstractions; authorization and security policy remain application-owned. See [ADR 0003: Authentication and Sessions](adr/0003-authentication-and-sessions.md).
+
 Use one central authentication system for:
 
 - mobile
@@ -465,6 +467,8 @@ Supported login methods initially:
 
 Email verification is mandatory.
 
+Social-only users need no local password. Account linking is explicit and requires recent authentication; email equality alone is insufficient. Mandatory TOTP/assurance requirements apply to effective privileged capabilities, including custom roles and every sign-in method.
+
 The architecture must support:
 
 - password reset
@@ -478,6 +482,8 @@ The architecture must support:
 ---
 
 # 14. Sessions
+
+Use PostgreSQL-backed server-side sessions with opaque credentials: HttpOnly browser cookies and securely stored mobile bearer credentials. Do not introduce an application JWT access/refresh architecture. ADR 0003 defines authoritative revocation, web/mobile lifetimes, administrative elevation, and five-minute critical-operation step-up. Successful password reset revokes all existing sessions.
 
 Users may have multiple active sessions.
 
@@ -1397,7 +1403,7 @@ ADR sequence (accepted records and planned decisions):
 ```text
 0001-backend-framework.md
 0002-database-access.md
-0003-authentication.md
+0003-authentication-and-sessions.md
 0004-object-storage.md
 0005-realtime.md
 0006-tenancy-and-authorization.md
