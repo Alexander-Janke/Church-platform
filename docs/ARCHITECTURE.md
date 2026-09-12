@@ -281,9 +281,9 @@ Use a modern server-side framework suitable for:
 - testing
 - PostgreSQL
 
-The exact framework may be selected during project initialization.
+The accepted backend is NestJS with TypeScript, using the standard Express adapter initially, within a modular monolith.
 
-Once selected, document the decision.
+See [ADR 0001: Backend Framework](adr/0001-backend-framework.md) for the decision and architecture rules.
 
 Avoid changing backend frameworks later without a strong architectural reason.
 
